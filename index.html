@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#6f7a6d" />
+  <meta name="description" content="Track your music pieces across piano and guitar with easy filtering and note storage" />
+  <title>Music Repertoire Tracker</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%236f7a6d' width='192' height='192'/><text x='96' y='120' font-size='80' font-weight='bold' fill='white' text-anchor='middle' font-family='system-ui'>♪</text></svg>" />
+</head>
+
+<body>
+  <div class="app">
+    <header class="header">
+      <div>
+        <h1>My Music Repertoire</h1>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <div class="toolbar-group">
+        <button id="toggleFormBtn" class="button" type="button">Add piece</button>
+        <button id="exportBtn" class="ghost-button" type="button">Export JSON</button>
+      </div>
+      <div class="toolbar-group">
+        <label class="ghost-button" for="importInput" style="display:inline-block; cursor:pointer;">
+          Import JSON
+        </label>
+        <input id="importInput" class="sr-only" type="file" accept="application/json" />
+        <button id="resetBtn" class="danger-button" type="button">Clear storage</button>
+      </div>
+    </div>
+
+    <section id="formPanel" class="panel form-panel" hidden>
+      <form id="pieceForm">
+        <input id="pieceId" type="hidden" />
+
+        <div class="field">
+          <label for="titleInput">Title</label>
+          <input id="titleInput" name="title" type="text" placeholder="Moonlight Sonata" required />
+        </div>
+
+        <div class="field">
+          <label for="artistInput">Artist / Composer</label>
+          <input id="artistInput" name="artist" type="text" placeholder="Ludwig van Beethoven" required />
+        </div>
+
+        <div class="field">
+          <label for="stateInput">State</label>
+          <select id="stateInput" name="state">
+            <option value="interesting-in-the-future">Later</option>
+            <option value="in-progress">In progress</option>
+            <option value="done">Done</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="instrumentInput">Instrument</label>
+          <select id="instrumentInput" name="instrument">
+            <option value="Piano">Piano</option>
+            <option value="Guitar">Guitar</option>
+          </select>
+        </div>
+
+        <div class="field" style="grid-column: 1 / -1;">
+          <label for="linkInput">PDF / Sheet Link</label>
+          <input id="linkInput" name="link" type="url" placeholder="https://drive.google.com/..." />
+        </div>
+
+        <div class="field" style="grid-column: 1 / -1;">
+          <div class="form-actions">
+            <button id="cancelEditBtn" class="ghost-button" type="button">Cancel</button>
+            <button class="button" type="submit">Save piece</button>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel list-panel">
+      <div class="list-header">
+        <h2>My pieces</h2>
+      </div>
+
+      <div class="filter-bar">
+        <div class="filter-field search-field">
+          <label for="searchInput">Search</label>
+          <input id="searchInput" type="search" placeholder="Title or composer" />
+        </div>
+
+        <div class="filter-field">
+          <label for="stateFilter">State</label>
+          <select id="stateFilter">
+            <option value="all">All states</option>
+            <option value="interesting-in-the-future">Later</option>
+            <option value="in-progress">In progress</option>
+            <option value="done">Done</option>
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label for="instrumentFilter">Instrument</label>
+          <select id="instrumentFilter">
+            <option value="all">All instruments</option>
+            <option value="Piano">Piano</option>
+            <option value="Guitar">Guitar</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="piecesList" class="pieces"></div>
+      <footer class="table-footer">
+        <div class="stats" id="stats"></div>
+      </footer>
+    </section>
+
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {
+        console.log('Service worker registration not available')
+      })
+    }
+  </script>
+</body>
+
+</html>
