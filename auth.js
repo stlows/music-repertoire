@@ -113,8 +113,8 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
     updateAuthStatus()
 
     // Sync repertoire after sign in
-    if (window.syncRepertoireFromSupabase) {
-      await syncRepertoireFromSupabase()
+    if (window.getPiecesFromSupabase) {
+      await windows.getPiecesFromSupabase()
     }
   } else if (event === 'SIGNED_OUT') {
     updateAuthStatus()
