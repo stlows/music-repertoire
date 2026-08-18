@@ -49,6 +49,7 @@ async function onAuthSuccess() {
   // Trigger repertoire sync
   if (window.getPiecesFromSupabase) {
     await window.getPiecesFromSupabase()
+    await window.renderPieces()
   }
 }
 
@@ -88,6 +89,10 @@ async function logout() {
   await supabaseClient.auth.signOut()
   currentSession = null
   updateAuthStatus()
+
+  if (typeof window.renderPieces === 'function') {
+    await window.renderPieces()
+  }
 }
 
 // ============================================
@@ -120,8 +125,16 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
     if (window.getPiecesFromSupabase) {
       await window.getPiecesFromSupabase()
     }
+
+    if (typeof window.renderPieces === 'function') {
+      await window.renderPieces()
+    }
   } else if (event === 'SIGNED_OUT') {
     updateAuthStatus()
+
+    if (typeof window.renderPieces === 'function') {
+      await window.renderPieces()
+    }
   }
 })
 

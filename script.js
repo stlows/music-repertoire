@@ -8,7 +8,6 @@ const piecesList = document.getElementById('piecesList')
 const stats = document.getElementById('stats')
 const toggleFormBtn = document.getElementById('toggleFormBtn')
 const cancelEditBtn = document.getElementById('cancelEditBtn')
-const resetBtn = document.getElementById('resetBtn')
 const pieceIdInput = document.getElementById('pieceId')
 const searchInput = document.getElementById('searchInput')
 const stateFilter = document.getElementById('stateFilter')
@@ -226,10 +225,14 @@ function setSortColumn(column) {
 }
 
 async function renderPieces() {
-  const allPieces = await getPiecesFromSupabase()
-  let filteredPieces = getFilteredPieces(allPieces)
+
+  const allPieces = window.supabaseAuth?.isLoggedIn() ? await getPiecesFromSupabase() : []
+  const safePieces = Array.isArray(allPieces) ? allPieces : []
+
+  console.log('Rendering pieces:', safePieces)
+  let filteredPieces = getFilteredPieces(safePieces)
   filteredPieces = sortPieces(filteredPieces)
-  renderStats(allPieces)
+  renderStats(safePieces)
 
   if (!filteredPieces.length) {
     piecesList.innerHTML = '<div class="empty-state">No pieces match your current filters.</div>'
