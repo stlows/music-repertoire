@@ -19,6 +19,10 @@ const authStatus = document.getElementById('authStatus')
 // ============================================
 let currentSession = null
 
+function getRedirectUrl() {
+  return window.location.href.split('#')[0].split('?')[0]
+}
+
 // ============================================
 // GOOGLE LOGIN
 // ============================================
@@ -27,7 +31,7 @@ function handleGoogleLogin() {
     const { error } = await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin
+        redirectTo: getRedirectUrl()
       }
     })
 
@@ -43,8 +47,8 @@ async function onAuthSuccess() {
   updateAuthStatus()
 
   // Trigger repertoire sync
-  if (window.syncRepertoireFromSupabase) {
-    await syncRepertoireFromSupabase()
+  if (window.getPiecesFromSupabase) {
+    await window.getPiecesFromSupabase()
   }
 }
 
@@ -97,8 +101,8 @@ async function initializeAuth() {
     updateAuthStatus()
 
     // Sync repertoire
-    if (window.syncRepertoireFromSupabase) {
-      await syncRepertoireFromSupabase()
+    if (window.getPiecesFromSupabase) {
+      await window.getPiecesFromSupabase()
     }
   } else {
     updateAuthStatus()
@@ -114,7 +118,7 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
 
     // Sync repertoire after sign in
     if (window.getPiecesFromSupabase) {
-      await windows.getPiecesFromSupabase()
+      await window.getPiecesFromSupabase()
     }
   } else if (event === 'SIGNED_OUT') {
     updateAuthStatus()
