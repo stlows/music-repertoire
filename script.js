@@ -1,14 +1,13 @@
-const STORAGE_KEY = 'music-repertoire-tracker'
 let sortColumn = null
 let sortOrder = null
+let isSyncing = false
+
 const formPanel = document.getElementById('formPanel')
 const pieceForm = document.getElementById('pieceForm')
 const piecesList = document.getElementById('piecesList')
 const stats = document.getElementById('stats')
 const toggleFormBtn = document.getElementById('toggleFormBtn')
 const cancelEditBtn = document.getElementById('cancelEditBtn')
-const exportBtn = document.getElementById('exportBtn')
-const importInput = document.getElementById('importInput')
 const resetBtn = document.getElementById('resetBtn')
 const pieceIdInput = document.getElementById('pieceId')
 const searchInput = document.getElementById('searchInput')
@@ -28,12 +27,6 @@ const stateLabelMap = {
   done: 'Done'
 }
 
-const defaultPieces = [
-  { id: crypto.randomUUID(), title: 'Clair de Lune', artist: 'Claude Debussy', state: 'in-progress', instrument: 'Piano', link: '' },
-  { id: crypto.randomUUID(), title: 'Dust in the Wind', artist: 'Kansas', state: 'interesting-in-the-future', instrument: 'Guitar', link: '' },
-  { id: crypto.randomUUID(), title: 'Für Elise', artist: 'Ludwig van Beethoven', state: 'done', instrument: 'Piano', link: '' }
-]
-
 function normalizeLink(value) {
   const trimmed = String(value || '').trim()
   if (!trimmed) return ''
@@ -41,32 +34,123 @@ function normalizeLink(value) {
   return `https://${trimmed}`
 }
 
-function readStorage() {
+// ============================================
+// SUPABASE SYNC FUNCTIONS
+// ============================================
+
+async function syncPieceToSupabase(piece) {
+  if (!window.supabaseAuth?.isLoggedIn()) return
+
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return defaultPieces
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return defaultPieces
-    return parsed.map((piece) => ({
-      id: piece.id || crypto.randomUUID(),
-      title: String(piece.title || '').trim(),
-      artist: String(piece.artist || '').trim(),
-      state: normalizeState(piece.state),
-      instrument: piece.instrument || 'Piano',
-      link: normalizeLink(piece.link)
-    })).filter((piece) => piece.title && piece.artist)
+    const { supabase } = window.supabaseAuth
+    const userId = window.supabaseAuth.getUser().id
+
+    const { error } = await supabase
+      .from('pieces')
+      .upsert(
+        {
+          id: piece.id,
+          user_id: userId,
+          title: piece.title,
+          artist: piece.artist,
+          state: piece.state,
+          instrument: piece.instrument,
+          link: piece.link || null
+        },
+        { onConflict: 'id' }
+      )
+
+    if (error) console.error('Error syncing piece:', error)
   } catch (error) {
-    console.error('Could not read repertoire from local storage:', error)
-    return defaultPieces
+    console.error('Sync error:', error)
   }
 }
 
-function writeStorage(items) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+async function deletePieceFromSupabase(id) {
+  if (!window.supabaseAuth?.isLoggedIn()) return
+
+  try {
+    const { supabase } = window.supabaseAuth
+
+    const { error } = await supabase
+      .from('pieces')
+      .delete()
+      .eq('id', id)
+
+    if (error) console.error('Error deleting piece:', error)
+  } catch (error) {
+    console.error('Delete sync error:', error)
+  }
 }
 
-function getPieces() {
-  return readStorage()
+async function getPiecesFromSupabase() {
+  if (!window.supabaseAuth?.isLoggedIn()) return
+
+  try {
+    isSyncing = true
+    const { supabase } = window.supabaseAuth
+    const userId = window.supabaseAuth.getUser().id
+
+    const { data, error } = await supabase
+      .from('pieces')
+      .select('id, title, artist, state, instrument, link')
+      .eq('user_id', userId)
+
+    if (error) throw error
+
+    if (data && data.length > 0) {
+      const pieces = data.map((piece) => ({
+        id: piece.id,
+        title: piece.title,
+        artist: piece.artist,
+        state: piece.state,
+        instrument: piece.instrument,
+        link: piece.link || ''
+      }))
+      return pieces
+    }
+  } catch (error) {
+    console.error('Sync from Supabase error:', error)
+  } finally {
+    isSyncing = false
+  }
+}
+
+async function getPieceFromSupabase(id) {
+  if (!window.supabaseAuth?.isLoggedIn()) return
+
+  try {
+    isSyncing = true
+    const { supabase } = window.supabaseAuth
+    const userId = window.supabaseAuth.getUser().id
+
+    const { data, error } = await supabase
+      .from('pieces')
+      .select('id, title, artist, state, instrument, link')
+      .eq('user_id', userId)
+      .eq('id', id)
+
+    if (error) throw error
+
+    if (data && data.length == 1) {
+      const piece = data[0]
+      return piece
+    }
+  } catch (error) {
+    console.error('Sync from Supabase error:', error)
+  } finally {
+    isSyncing = false
+  }
+}
+
+// Make sync function available globally
+window.getPiecesFromSupabase = getPiecesFromSupabase
+
+function normalizeLink(value) {
+  const trimmed = String(value || '').trim()
+  if (!trimmed) return ''
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  return `https://${trimmed}`
 }
 
 function renderStats(items) {
@@ -83,7 +167,7 @@ function renderStats(items) {
   `
 }
 
-function getFilteredPieces(items = getPieces()) {
+function getFilteredPieces(items) {
   const query = searchInput.value.trim().toLowerCase()
   const selectedState = stateFilter.value
   const selectedInstrument = instrumentFilter.value
@@ -141,11 +225,10 @@ function setSortColumn(column) {
   }
 }
 
-function renderPieces() {
-  const allPieces = getPieces()
+async function renderPieces() {
+  const allPieces = await getPiecesFromSupabase()
   let filteredPieces = getFilteredPieces(allPieces)
   filteredPieces = sortPieces(filteredPieces)
-
   renderStats(allPieces)
 
   if (!filteredPieces.length) {
@@ -210,9 +293,8 @@ function renderPieces() {
   })
 }
 
-function openInlineEditor(id) {
-  const pieces = getPieces()
-  const piece = pieces.find((entry) => entry.id === id)
+async function openInlineEditor(id) {
+  const piece = await getPieceFromSupabase(id)
   if (!piece) return
 
   const row = document.querySelector(`tr[data-id="${id}"]`)
@@ -247,7 +329,7 @@ function openInlineEditor(id) {
   row.querySelector('.cancel-inline-piece').addEventListener('click', () => renderPieces())
 }
 
-function saveInlinePiece(id) {
+async function saveInlinePiece(id) {
   const row = document.querySelector(`tr[data-id="${id}"]`)
   if (!row) return
 
@@ -262,29 +344,13 @@ function saveInlinePiece(id) {
     return
   }
 
-  const pieces = getPieces()
-  const index = pieces.findIndex((piece) => piece.id === id)
-  if (index === -1) return
-
-  pieces[index] = { ...pieces[index], title, artist, state, instrument, link }
-  writeStorage(pieces)
-  renderPieces()
-}
-
-
-function openEditor(id) {
-  const pieces = getPieces()
-  const piece = pieces.find((entry) => entry.id === id)
+  const piece = await getPieceFromSupabase(id)
   if (!piece) return
 
-  pieceIdInput.value = piece.id
-  document.getElementById('titleInput').value = piece.title
-  document.getElementById('artistInput').value = piece.artist
-  document.getElementById('stateInput').value = piece.state
-  document.getElementById('instrumentInput').value = piece.instrument
-  linkInput.value = piece.link || ''
-  formPanel.hidden = false
-  document.getElementById('titleInput').focus()
+  const updatedPiece = { ...piece, title, artist, state, instrument, link }
+
+  syncPieceToSupabase(updatedPiece)
+  renderPieces()
 }
 
 function resetForm() {
@@ -296,7 +362,7 @@ function resetForm() {
   formPanel.hidden = true
 }
 
-function savePiece(event) {
+async function savePiece(event) {
   event.preventDefault()
 
   const title = document.getElementById('titleInput').value.trim()
@@ -310,26 +376,17 @@ function savePiece(event) {
     return
   }
 
-  const pieces = getPieces()
-  const id = pieceIdInput.value || crypto.randomUUID()
+  const pieces = await getPiecesFromSupabase()
 
-  const nextPiece = { id, title, artist, state, instrument, link }
-  const existingIndex = pieces.findIndex((piece) => piece.id === id)
+  const nextPiece = { title, artist, state, instrument, link }
 
-  if (existingIndex >= 0) {
-    pieces[existingIndex] = nextPiece
-  } else {
-    pieces.push(nextPiece)
-  }
-
-  writeStorage(pieces)
+  syncPieceToSupabase(nextPiece)
   renderPieces()
   resetForm()
 }
 
 function deletePiece(id) {
-  const pieces = getPieces().filter((piece) => piece.id !== id)
-  writeStorage(pieces)
+  deletePieceFromSupabase(id)
   renderPieces()
 }
 
@@ -340,65 +397,6 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;')
-}
-
-function exportJSON() {
-  const pieces = getPieces()
-  const blob = new Blob([JSON.stringify(pieces, null, 2)], { type: 'application/json' })
-  const href = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = href
-  link.download = 'music-repertoire.json'
-  link.click()
-  URL.revokeObjectURL(href)
-}
-
-function importJSON(event) {
-  const [file] = event.target.files || []
-  if (!file) return
-
-  const reader = new FileReader()
-  reader.onload = () => {
-    try {
-      const parsed = JSON.parse(String(reader.result))
-      if (!Array.isArray(parsed)) {
-        throw new Error('JSON must be an array of pieces.')
-      }
-
-      const cleaned = parsed
-        .map((piece) => ({
-          id: piece.id || crypto.randomUUID(),
-          title: String(piece.title || '').trim(),
-          artist: String(piece.artist || '').trim(),
-          state: normalizeState(piece.state),
-          instrument: piece.instrument || 'Piano',
-          link: normalizeLink(piece.link)
-        }))
-        .filter((piece) => piece.title && piece.artist)
-
-      if (!cleaned.length) {
-        throw new Error('No valid pieces found in the uploaded file.')
-      }
-
-      writeStorage(cleaned)
-      renderPieces()
-      alert('Your repertoire has been imported from JSON.')
-    } catch (error) {
-      alert(`Import failed: ${error.message}`)
-    } finally {
-      event.target.value = ''
-    }
-  }
-
-  reader.readAsText(file)
-}
-
-function clearStorage() {
-  const shouldClear = window.confirm('Clear all saved repertoire entries from local storage?')
-  if (!shouldClear) return
-  localStorage.removeItem(STORAGE_KEY)
-  renderPieces()
-  resetForm()
 }
 
 toggleFormBtn.addEventListener('click', () => {
@@ -412,18 +410,11 @@ toggleFormBtn.addEventListener('click', () => {
 
 cancelEditBtn.addEventListener('click', resetForm)
 pieceForm.addEventListener('submit', savePiece)
-exportBtn.addEventListener('click', exportJSON)
-importInput.addEventListener('change', importJSON)
-resetBtn.addEventListener('click', clearStorage)
 searchInput.addEventListener('input', renderPieces)
 stateFilter.addEventListener('change', renderPieces)
 instrumentFilter.addEventListener('change', renderPieces)
 
 document.addEventListener('DOMContentLoaded', () => {
-  const initial = getPieces()
-  if (!localStorage.getItem(STORAGE_KEY) && initial.length) {
-    writeStorage(initial)
-  }
   renderPieces()
   resetForm()
 })

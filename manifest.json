@@ -2,8 +2,8 @@
   "name": "Music Repertoire Tracker",
   "short_name": "Repertoire",
   "description": "Track your music pieces across piano and guitar with easy filtering and note storage",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "/music-repertoire",
+  "scope": "/music-repertoire",
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#6f7a6d",
@@ -24,35 +24,6 @@
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Add Piece",
-      "short_name": "Add",
-      "description": "Add a new piece to your repertoire",
-      "url": "/?action=add",
-      "icons": [
-        {
-          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%236f7a6d' width='96' height='96'/><text x='48' y='65' font-size='50' font-weight='bold' fill='white' text-anchor='middle' font-family='system-ui'>+</text></svg>",
-          "sizes": "96x96",
-          "type": "image/svg+xml"
-        }
-      ]
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect fill='%23f4f1ea' width='540' height='720'/><rect fill='%236f7a6d' width='540' height='80'/><text x='20' y='55' font-size='32' font-weight='bold' fill='white' font-family='system-ui'>Music Repertoire</text></svg>",
-      "sizes": "540x720",
-      "type": "image/svg+xml",
-      "form_factor": "narrow"
-    },
-    {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1280 720'><rect fill='%23f4f1ea' width='1280' height='720'/><rect fill='%236f7a6d' width='1280' height='80'/><text x='20' y='55' font-size='32' font-weight='bold' fill='white' font-family='system-ui'>Music Repertoire</text></svg>",
-      "sizes": "1280x720",
-      "type": "image/svg+xml",
-      "form_factor": "wide"
     }
   ]
 }

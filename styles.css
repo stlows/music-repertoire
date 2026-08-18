@@ -378,6 +378,67 @@ form {
   border: 0;
 }
 
+/* ============================================
+   AUTH STATUS & LOGIN
+   ============================================ */
+
+.auth-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.user-info span {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.user-info .ghost-button {
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.google-login-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-alt);
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.google-login-button:hover {
+  background: var(--panel);
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(111, 122, 109, 0.15);
+}
+
+.google-login-button:active {
+  transform: scale(0.98);
+}
+
+.google-login-button svg {
+  width: 20px;
+  height: 20px;
+}
+
 @media (max-width: 760px) {
   form {
     grid-template-columns: 1fr;
